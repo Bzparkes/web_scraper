@@ -1,27 +1,80 @@
-const PORT = 8000
-const axios = require('axios')
-const cheerio = require('cheerio')
-const express = require('express')
+const axios = require('axios');
+const cheerio = require('cheerio');
+const express = require('express');
 
-const app = express()
+const app = express();
+const PORT = 8000;
 
-const url = 'https://www.theguardian.com/au'
+app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
 
-axios(url)
-    .then(response => {
-        const html = response.data
-        const $ = cheerio.load(html)
-        const articles = []
+const socialPlatforms = [
+  { name: 'facebook', pattern: /facebook\.com/ },
+  { name: 'instagram', pattern: /instagram\.com/ },
+  { name: 'linkedin', pattern: /linkedin\.com/ },
+  { name: 'twitter', pattern: /twitter\.com/ },
+  { name: 'youtube', pattern: /youtube\.com/ },
+  // Add more social media platforms here
+];
 
-        $('.show-underline', html).each(function() {
-            const title = $(this).text()  
-            const url = $(this).find('a').attr('href') 
-            articles.push({
-                title,
-                url
-            })
-        })
-        console.log(articles)
-    }).catch(err => console.log(err))
+const foundSocialPlatforms = {};
 
-app.listen(PORT, () => console.log(`server running on PORT ${PORT}`) )
+async function getCrawlUrls(url) {
+  try {
+    const response = await axios(url);
+    const html = response.data;
+    const $ = cheerio.load(html);
+    const crawlUrls = [];
+
+    $('a', html).each(function () {
+      const href = $(this).attr('href');
+      if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        crawlUrls.push(href);
+      }
+    });
+
+    console.log('Crawl URLs:', crawlUrls);
+    return crawlUrls;
+  } catch (err) {
+    console.error('An error occurred in getCrawlUrls:', err.message);
+    throw err;
+  }
+}
+
+async function crawlAndFindSocials(url) {
+  try {
+    const response = await axios(url);
+    const html = response.data;
+    const $ = cheerio.load(html);
+    const socialLinks = [];
+
+    for (const platform of socialPlatforms) {
+      if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
+        socialLinks.push({ platform: platform.name, link: url });
+        foundSocialPlatforms[platform.name] = true;
+        console.log(`Social Links for ${platform.name}:`, socialLinks);
+        if (Object.keys(foundSocialPlatforms).length === socialPlatforms.length) {
+          console.log('All social media types found. Stopping...');
+          process.exit(0); // Stop the script once all social media types are found
+        }
+      }
+    }
+  } catch (err) {
+    console.error('An error occurred in crawlAndFindSocials:', err.message);
+  }
+}
+
+async function crawlWebsite(baseUrl) {
+  try {
+    const crawlUrls = await getCrawlUrls(baseUrl);
+
+    for (const url of crawlUrls) {
+      await crawlAndFindSocials(url);
+    }
+
+    console.log('Crawling complete. All pages checked.');
+  } catch (err) {
+    console.error('An error occurred in crawlWebsite:', err.message);
+  }
+}
+
+crawlWebsite('https://redhealth.com.au/'); // Replace with the website URL you want to scrape
