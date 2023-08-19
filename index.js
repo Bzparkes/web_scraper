@@ -1,12 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
-const express = require('express');
-
-const app = express();
-const PORT = 8000;
-
-app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
 
 const socialPlatforms = [
   { name: 'facebook', pattern: /facebook\.com/ },
@@ -18,6 +12,7 @@ const socialPlatforms = [
 ];
 
 const foundSocialPlatforms = {};
+const maxRedirects = 5; // Maximum number of redirects to follow
 
 async function getCrawlUrls(url) {
   try {
@@ -41,33 +36,22 @@ async function getCrawlUrls(url) {
   }
 }
 
-async function crawlAndFindSocials(url) {
+async function crawlAndFindSocials(url, redirectCount = 0) {
   try {
+    if (redirectCount >= maxRedirects) {
+      console.log(`Maximum number of redirects exceeded for ${url}. Skipping...`);
+      return;
+    }
+
     const response = await axios(url);
     const html = response.data;
-
-    const $ = cheerio.load(html);
-    const socialLinks = [];
 
     for (const platform of socialPlatforms) {
       if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
         foundSocialPlatforms[platform.name] = true;
         const result = `Social Links for ${platform.name}: ${url} - ${foundSocialPlatforms[platform.name] ? 'Yes' : 'No'}`;
-        fs.appendFileSync('index.html', result + '<br>\n'); // Append with a line break
+        fs.appendFileSync('index.html', result + '<br>'); // Add a line break after each result
         console.log(result);
-      }
-    }
-
-    for (const platform of socialPlatforms) {
-      if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
-        socialLinks.push({ platform: platform.name, link: url });
-        foundSocialPlatforms[platform.name] = true;
-        console.log(`Social Links for ${platform.name}:`, socialLinks);
-
-        if (Object.keys(foundSocialPlatforms).length === socialPlatforms.length) {
-          console.log('All social media types found. Stopping...');
-          process.exit(0); // Stop the script once all social media types are found
-        }
       }
     }
   } catch (err) {
