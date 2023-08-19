@@ -1,15 +1,12 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-
 const fs = require('fs');
-
 const express = require('express');
 
 const app = express();
 const PORT = 8000;
 
 app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
-
 
 const socialPlatforms = [
   { name: 'facebook', pattern: /facebook\.com/ },
@@ -49,17 +46,17 @@ async function crawlAndFindSocials(url) {
     const response = await axios(url);
     const html = response.data;
 
+    const $ = cheerio.load(html);
+    const socialLinks = [];
 
     for (const platform of socialPlatforms) {
       if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
         foundSocialPlatforms[platform.name] = true;
         const result = `Social Links for ${platform.name}: ${url} - ${foundSocialPlatforms[platform.name] ? 'Yes' : 'No'}`;
-        fs.appendFileSync('index.html', result + '\n');
+        fs.appendFileSync('index.html', result + '<br>\n'); // Append with a line break
         console.log(result);
-
-
-    const $ = cheerio.load(html);
-    const socialLinks = [];
+      }
+    }
 
     for (const platform of socialPlatforms) {
       if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
@@ -92,10 +89,7 @@ async function crawlWebsite(baseUrl) {
   }
 }
 
-
 // Create or clear the index.html file
 fs.writeFileSync('index.html', '');
-
-
 
 crawlWebsite('https://redhealth.com.au/'); // Replace with the website URL you want to scrape
