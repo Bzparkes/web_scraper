@@ -1,11 +1,15 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+
+const fs = require('fs');
+
 const express = require('express');
 
 const app = express();
 const PORT = 8000;
 
 app.listen(PORT, () => console.log(`Server running on PORT ${PORT}`));
+
 
 const socialPlatforms = [
   { name: 'facebook', pattern: /facebook\.com/ },
@@ -44,6 +48,16 @@ async function crawlAndFindSocials(url) {
   try {
     const response = await axios(url);
     const html = response.data;
+
+
+    for (const platform of socialPlatforms) {
+      if (platform.pattern.test(url) && !foundSocialPlatforms[platform.name]) {
+        foundSocialPlatforms[platform.name] = true;
+        const result = `Social Links for ${platform.name}: ${url} - ${foundSocialPlatforms[platform.name] ? 'Yes' : 'No'}`;
+        fs.appendFileSync('index.html', result + '\n');
+        console.log(result);
+
+
     const $ = cheerio.load(html);
     const socialLinks = [];
 
@@ -52,6 +66,7 @@ async function crawlAndFindSocials(url) {
         socialLinks.push({ platform: platform.name, link: url });
         foundSocialPlatforms[platform.name] = true;
         console.log(`Social Links for ${platform.name}:`, socialLinks);
+
         if (Object.keys(foundSocialPlatforms).length === socialPlatforms.length) {
           console.log('All social media types found. Stopping...');
           process.exit(0); // Stop the script once all social media types are found
@@ -76,5 +91,11 @@ async function crawlWebsite(baseUrl) {
     console.error('An error occurred in crawlWebsite:', err.message);
   }
 }
+
+
+// Create or clear the index.html file
+fs.writeFileSync('index.html', '');
+
+
 
 crawlWebsite('https://redhealth.com.au/'); // Replace with the website URL you want to scrape
