@@ -69,4 +69,4 @@ async function crawlWebsite(baseUrl) {
 // Create or clear the index.html file
 fs.writeFileSync('index.html', '');
 
-crawlWebsite('https://redhealth.com.au/'); // Replace with the website URL you want to scrape
+crawlWebsite('https://bigfooty.com/'); // Replace with the website URL you want to scrape
